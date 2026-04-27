@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: decentrapay
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  hardhat:
+    image: oven/bun:1
+    working_dir: /app/packages/contracts
+    volumes:
+      - .:/app
+    command: /bin/sh -c "bun install && bunx hardhat node --hostname 0.0.0.0"
+    ports:
+      - "8545:8545"
+
+  api:
+    image: oven/bun:1
+    working_dir: /app/apps/api
+    volumes:
+      - .:/app
+    env_file:
+      - ./apps/api/.env.docker
+    depends_on:
+      - postgres
+    command: /bin/sh -c "bun install && bun run db:push && bun run src/scripts/seed.ts && bun run dev"
+    ports:
+      - "3001:3001"
+
+  web:
+    image: oven/bun:1
+    working_dir: /app/apps/web
+    volumes:
+      - .:/app
+    env_file:
+      - ./apps/web/.env.docker
+    depends_on:
+      - api
+    command: /bin/sh -c "bun install && bun run dev"
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.turbo/
+
+# env
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# build
+dist/
+.next/
+out/
+
+# artifacts
+artifacts/
+cache/
+typechain-types/
+
+# misc
+.DS_Store
+*.log
+coverage/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# reference docs (large files)
+*.pdf
+*.xlsx

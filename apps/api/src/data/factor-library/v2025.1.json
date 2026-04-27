@@ -1,0 +1,546 @@
+{
+    "version": "v2025.1",
+    "effectiveFrom": "2025-01-01",
+    "source": "EPA GHG Emission Factors Hub 2025 + IPCC AR6 GWPs",
+    "gwp": {
+        "CO2": 1,
+        "CH4_fossil": 29.8,
+        "CH4_bio": 27.9,
+        "N2O": 273
+    },
+    "categories": {
+        "stationary_combustion": {
+            "description": "Scope 1 — Direct stationary fuel combustion",
+            "scope": 1,
+            "fuels": {
+                "natural_gas": {
+                    "unit": "mmBtu",
+                    "factors": {
+                        "CO2": 53.06,
+                        "CH4_fossil": 0.001,
+                        "N2O": 0.0001
+                    }
+                },
+                "coal_bituminous": {
+                    "unit": "mmBtu",
+                    "factors": {
+                        "CO2": 93.28,
+                        "CH4_fossil": 0.011,
+                        "N2O": 0.0016
+                    }
+                },
+                "coal_subbituminous": {
+                    "unit": "mmBtu",
+                    "factors": {
+                        "CO2": 97.17,
+                        "CH4_fossil": 0.011,
+                        "N2O": 0.0016
+                    }
+                },
+                "coal_anthracite": {
+                    "unit": "mmBtu",
+                    "factors": {
+                        "CO2": 103.69,
+                        "CH4_fossil": 0.011,
+                        "N2O": 0.0016
+                    }
+                },
+                "distillate_fuel_oil_2": {
+                    "unit": "gallon",
+                    "heatContent": 0.138,
+                    "factors": {
+                        "CO2": 73.96,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "residual_fuel_oil_6": {
+                    "unit": "gallon",
+                    "heatContent": 0.15,
+                    "factors": {
+                        "CO2": 75.10,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "kerosene": {
+                    "unit": "gallon",
+                    "heatContent": 0.135,
+                    "factors": {
+                        "CO2": 75.20,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "lpg": {
+                    "unit": "gallon",
+                    "heatContent": 0.092,
+                    "factors": {
+                        "CO2": 61.71,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "motor_gasoline": {
+                    "unit": "gallon",
+                    "heatContent": 0.125,
+                    "factors": {
+                        "CO2": 70.22,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "propane": {
+                    "unit": "gallon",
+                    "heatContent": 0.091,
+                    "factors": {
+                        "CO2": 62.87,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    }
+                },
+                "wood_residuals": {
+                    "unit": "mmBtu",
+                    "factors": {
+                        "CO2": 93.80,
+                        "CH4_bio": 0.0072,
+                        "N2O": 0.0036
+                    }
+                },
+                "landfill_gas": {
+                    "unit": "scf",
+                    "factors": {
+                        "CO2": 0.025254,
+                        "CH4_bio": 0.001552,
+                        "N2O": 0.000306
+                    },
+                    "note": "factors per scf directly"
+                },
+                "biodiesel": {
+                    "unit": "gallon",
+                    "heatContent": 0.128,
+                    "factors": {
+                        "CO2": 73.84,
+                        "CH4_bio": 0.0011,
+                        "N2O": 0.00011
+                    }
+                },
+                "ethanol": {
+                    "unit": "gallon",
+                    "heatContent": 0.084,
+                    "factors": {
+                        "CO2": 68.44,
+                        "CH4_bio": 0.0011,
+                        "N2O": 0.00011
+                    }
+                }
+            }
+        },
+        "mobile_combustion": {
+            "description": "Scope 1 — Mobile source fuel combustion (vehicles, equipment)",
+            "scope": 1,
+            "fuels": {
+                "diesel_onroad": {
+                    "unit": "gallon",
+                    "co2PerUnit": 10.21,
+                    "ch4Factor": 0.0051,
+                    "n2oFactor": 0.0015,
+                    "note": "kg CO2 per gallon, g CH4/N2O per mile for on-road heavy trucks"
+                },
+                "diesel_offroad": {
+                    "unit": "gallon",
+                    "co2PerUnit": 10.21,
+                    "ch4Factor": 0.00058,
+                    "n2oFactor": 0.00026,
+                    "note": "g CH4/N2O per gallon for off-road equipment"
+                },
+                "gasoline_onroad": {
+                    "unit": "gallon",
+                    "co2PerUnit": 8.78,
+                    "ch4Factor": 0.0049,
+                    "n2oFactor": 0.0022,
+                    "note": "kg CO2 per gallon, g CH4/N2O per mile for passenger cars"
+                },
+                "gasoline_offroad": {
+                    "unit": "gallon",
+                    "co2PerUnit": 8.78,
+                    "ch4Factor": 0.00193,
+                    "n2oFactor": 0.00120,
+                    "note": "g CH4/N2O per gallon for off-road 4-stroke"
+                },
+                "jet_fuel": {
+                    "unit": "gallon",
+                    "co2PerUnit": 9.75,
+                    "ch4Factor": 0.0,
+                    "n2oFactor": 0.0003,
+                    "note": "kerosene-type jet fuel"
+                }
+            }
+        },
+        "purchased_electricity": {
+            "description": "Scope 2 — Indirect emissions from purchased electricity",
+            "scope": 2,
+            "grids": {
+                "us_avg": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.385
+                    },
+                    "note": "US national average approx ~848 lb/MWh ≈ 0.385 kg/kWh"
+                },
+                "us_camx": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.198
+                    },
+                    "note": "WECC California ≈ 436 lb/MWh"
+                },
+                "us_erct": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.335
+                    },
+                    "note": "ERCOT Texas ≈ 738 lb/MWh"
+                },
+                "us_mrow": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.417
+                    },
+                    "note": "MRO West ≈ 920 lb/MWh"
+                },
+                "us_newe": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.244
+                    },
+                    "note": "NPCC New England ≈ 537 lb/MWh"
+                },
+                "us_nwpp": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.286
+                    },
+                    "note": "WECC Northwest ≈ 631 lb/MWh"
+                },
+                "us_srmw": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.466
+                    },
+                    "note": "SERC Midwest"
+                },
+                "in_north": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.710
+                    },
+                    "note": "India Northern Grid"
+                },
+                "in_south": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.820
+                    },
+                    "note": "India Southern Grid"
+                },
+                "in_west": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.910
+                    },
+                    "note": "India Western Grid"
+                },
+                "eu_avg": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.275
+                    },
+                    "note": "EU-27 average"
+                },
+                "uk": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.207
+                    },
+                    "note": "UK grid 2024"
+                },
+                "cn_avg": {
+                    "unit": "kWh",
+                    "factors": {
+                        "CO2": 0.555
+                    },
+                    "note": "China national average"
+                }
+            }
+        },
+        "business_travel": {
+            "description": "Scope 3 — Category 6 Business Travel",
+            "scope": 3,
+            "modes": {
+                "air_short_haul": {
+                    "unit": "passenger_mile",
+                    "factors": {
+                        "CO2": 0.254
+                    },
+                    "note": "Short-haul flights < 300 miles"
+                },
+                "air_medium_haul": {
+                    "unit": "passenger_mile",
+                    "factors": {
+                        "CO2": 0.195
+                    },
+                    "note": "Medium-haul flights 300-2300 miles"
+                },
+                "air_long_haul": {
+                    "unit": "passenger_mile",
+                    "factors": {
+                        "CO2": 0.165
+                    },
+                    "note": "Long-haul flights > 2300 miles"
+                },
+                "rail": {
+                    "unit": "passenger_mile",
+                    "factors": {
+                        "CO2": 0.064
+                    },
+                    "note": "Intercity rail"
+                },
+                "bus": {
+                    "unit": "passenger_mile",
+                    "factors": {
+                        "CO2": 0.053
+                    },
+                    "note": "Bus transit"
+                },
+                "passenger_car": {
+                    "unit": "vehicle_mile",
+                    "factors": {
+                        "CO2": 0.297,
+                        "CH4_fossil": 0.0000059,
+                        "N2O": 0.0000053
+                    },
+                    "note": "Average passenger car"
+                }
+            }
+        },
+        "freight_transport": {
+            "description": "Scope 3 — Category 4 & 9 Upstream/Downstream freight",
+            "scope": 3,
+            "modes": {
+                "truck_medium_heavy": {
+                    "unit": "ton_mile",
+                    "factors": {
+                        "CO2": 0.186
+                    },
+                    "note": "Medium and heavy-duty trucks"
+                },
+                "rail_freight": {
+                    "unit": "ton_mile",
+                    "factors": {
+                        "CO2": 0.021
+                    },
+                    "note": "Freight rail"
+                },
+                "waterborne": {
+                    "unit": "ton_mile",
+                    "factors": {
+                        "CO2": 0.077
+                    },
+                    "note": "Waterborne craft"
+                },
+                "air_freight": {
+                    "unit": "ton_mile",
+                    "factors": {
+                        "CO2": 1.086
+                    },
+                    "note": "Air cargo"
+                }
+            }
+        },
+        "waste": {
+            "description": "Scope 3 — Category 5 Waste Generated in Operations",
+            "scope": 3,
+            "materials": {
+                "mixed_msw_landfilled": {
+                    "unit": "short_ton",
+                    "factors": {
+                        "CO2": 580
+                    },
+                    "note": "Mixed MSW to landfill (0.58 MTCO2e/short ton = 580 kg)"
+                },
+                "mixed_recyclables_recycled": {
+                    "unit": "short_ton",
+                    "factors": {
+                        "CO2": 90
+                    },
+                    "note": "Mixed recyclables recycled (0.09 MTCO2e)"
+                },
+                "paper_office_landfilled": {
+                    "unit": "short_ton",
+                    "factors": {
+                        "CO2": 1410
+                    },
+                    "note": "Office paper to landfill (1.41 MTCO2e)"
+                },
+                "food_waste_landfilled": {
+                    "unit": "short_ton",
+                    "factors": {
+                        "CO2": 680
+                    },
+                    "note": "Food waste to landfill (0.68 MTCO2e)"
+                },
+                "ewaste_landfilled": {
+                    "unit": "short_ton",
+                    "factors": {
+                        "CO2": 20
+                    },
+                    "note": "Mixed electronics to landfill"
+                }
+            }
+        },
+        "agriculture": {
+            "description": "Scope 1 — Agricultural processes",
+            "scope": 1,
+            "activities": {
+                "synthetic_n_urea": {
+                    "unit": "kg_N",
+                    "factors": {
+                        "N2O": 0.01
+                    },
+                    "note": "Direct N2O from synthetic N fertilizer. Urea is 46% N by weight."
+                },
+                "synthetic_n_generic": {
+                    "unit": "kg_N",
+                    "factors": {
+                        "N2O": 0.01
+                    },
+                    "note": "Generic synthetic N fertilizer — IPCC Tier 1 default EF"
+                },
+                "organic_n_manure": {
+                    "unit": "kg_N",
+                    "factors": {
+                        "N2O": 0.01
+                    },
+                    "note": "Organic N from manure applied to soils"
+                },
+                "enteric_dairy": {
+                    "unit": "head_year",
+                    "factors": {
+                        "CH4_bio": 109
+                    },
+                    "note": "Dairy cattle enteric fermentation (109 kg CH4/head/year, EPA)"
+                },
+                "enteric_beef": {
+                    "unit": "head_year",
+                    "factors": {
+                        "CH4_bio": 71
+                    },
+                    "note": "Beef cattle (non-feedlot) enteric fermentation"
+                },
+                "manure_dairy": {
+                    "unit": "head_year",
+                    "factors": {
+                        "CH4_bio": 53.4
+                    },
+                    "note": "Dairy cattle manure management"
+                },
+                "manure_swine": {
+                    "unit": "head_year",
+                    "factors": {
+                        "CH4_bio": 15
+                    },
+                    "note": "Swine manure management"
+                },
+                "rice_irrigated": {
+                    "unit": "hectare_season",
+                    "factors": {
+                        "CH4_bio": 150
+                    },
+                    "note": "Irrigated rice cultivation baseline"
+                },
+                "diesel_ag_equipment": {
+                    "unit": "gallon",
+                    "factors": {
+                        "CO2": 10.21,
+                        "CH4_fossil": 0.00126,
+                        "N2O": 0.00107
+                    },
+                    "note": "Agricultural diesel equipment"
+                },
+                "gasoline_ag_equipment": {
+                    "unit": "gallon",
+                    "factors": {
+                        "CO2": 8.78,
+                        "CH4_fossil": 0.00193,
+                        "N2O": 0.00120
+                    },
+                    "note": "Agricultural gasoline equipment (4-stroke)"
+                }
+            }
+        },
+        "technology": {
+            "description": "Scope 1/2/3 — Technology sector-specific activities",
+            "scope": 1,
+            "activities": {
+                "data_center_diesel_generator": {
+                    "unit": "gallon",
+                    "factors": {
+                        "CO2": 10.21,
+                        "CH4_fossil": 0.003,
+                        "N2O": 0.0006
+                    },
+                    "note": "Backup diesel generators scope 1"
+                },
+                "data_center_electricity": {
+                    "unit": "kWh",
+                    "scope": 2,
+                    "factors": {
+                        "CO2": 0.385
+                    },
+                    "note": "Uses US avg grid factor; override with specific grid"
+                },
+                "refrigerant_r410a": {
+                    "unit": "kg",
+                    "factors": {
+                        "CO2": 2088
+                    },
+                    "note": "R-410A GWP = 2088 (IPCC AR6), Scope 1 fugitive"
+                },
+                "refrigerant_r134a": {
+                    "unit": "kg",
+                    "factors": {
+                        "CO2": 1430
+                    },
+                    "note": "R-134A GWP = 1430"
+                },
+                "employee_commuting": {
+                    "unit": "vehicle_mile",
+                    "scope": 3,
+                    "factors": {
+                        "CO2": 0.297
+                    },
+                    "note": "Scope 3 Category 7"
+                },
+                "cloud_computing": {
+                    "unit": "kWh",
+                    "scope": 3,
+                    "factors": {
+                        "CO2": 0.385
+                    },
+                    "note": "Scope 3 upstream compute (adjust grid factor)"
+                }
+            }
+        }
+    },
+    "unitConversions": {
+        "scf_to_mmBtu_natural_gas": 0.001026,
+        "litre_to_gallon": 0.264172,
+        "kg_to_short_ton": 0.00110231,
+        "short_ton_to_kg": 907.185,
+        "mile_to_km": 1.60934,
+        "MWh_to_kWh": 1000,
+        "lb_to_kg": 0.453592,
+        "mmBtu_to_MJ": 1055.06
+    }
+}
