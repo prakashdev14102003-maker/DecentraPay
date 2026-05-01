@@ -10,6 +10,7 @@ import { companies } from "./companies.js";
 export const orderSideEnum = pgEnum("order_side", ["BUY", "SELL"]);
 export const orderStatusEnum = pgEnum("order_status", [
     "OPEN",
+    "PARTIALLY_FILLED",
     "FILLED",
     "CANCELLED",
 ]);

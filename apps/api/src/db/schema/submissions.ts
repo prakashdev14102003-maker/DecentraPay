@@ -30,6 +30,8 @@ export const submissions = pgTable(
         totalScope2Kg: numeric("total_scope2_kg", { precision: 18, scale: 3 }),
         totalScope3Kg: numeric("total_scope3_kg", { precision: 18, scale: 3 }),
         totalKg: numeric("total_kg", { precision: 18, scale: 3 }),
+        proofPdfPath: text("proof_pdf_path"),
+        proofPdfHash: char("proof_pdf_hash", { length: 64 }),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
             .defaultNow(),

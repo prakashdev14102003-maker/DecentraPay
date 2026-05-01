@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, or, asc, desc } from "drizzle-orm";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { db } from "../db/index.js";
@@ -22,17 +22,28 @@ router.get(
         try {
             const depth = parseInt(req.query.depth as string) || 20;
 
+            // Include both OPEN and PARTIALLY_FILLED orders in the book
             const bids = await db
                 .select()
                 .from(orders)
-                .where(and(eq(orders.side, "BUY"), eq(orders.status, "OPEN")))
+                .where(
+                    and(
+                        eq(orders.side, "BUY"),
+                        or(eq(orders.status, "OPEN"), eq(orders.status, "PARTIALLY_FILLED"))
+                    )
+                )
                 .orderBy(desc(orders.price), asc(orders.placedAt))
                 .limit(depth);
 
             const asks = await db
                 .select()
                 .from(orders)
-                .where(and(eq(orders.side, "SELL"), eq(orders.status, "OPEN")))
+                .where(
+                    and(
+                        eq(orders.side, "SELL"),
+                        or(eq(orders.status, "OPEN"), eq(orders.status, "PARTIALLY_FILLED"))
+                    )
+                )
                 .orderBy(asc(orders.price), asc(orders.placedAt))
                 .limit(depth);
 
@@ -101,6 +112,42 @@ router.post(
     }
 );
 
+// GET /api/v1/marketplace/orders/mine — Get current company's orders
+router.get(
+    "/orders/mine",
+    authenticate,
+    authorize("COMPANY"),
+    async (req: Request, res: Response) => {
+        try {
+            const companyId = req.user!.companyId!;
+
+            const myOrders = await db
+                .select()
+                .from(orders)
+                .where(eq(orders.companyId, companyId))
+                .orderBy(desc(orders.placedAt));
+
+            // Compute fill info for each order
+            const ordersWithFill = myOrders.map((o) => {
+                const qty = parseFloat(o.quantity);
+                const rem = parseFloat(o.remaining);
+                const filled = qty - rem;
+                const fillPct = qty > 0 ? Math.round((filled / qty) * 100) : 0;
+                return {
+                    ...o,
+                    filled: String(filled),
+                    fillPct,
+                };
+            });
+
+            res.json({ success: true, data: ordersWithFill });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch orders";
+            res.status(500).json({ success: false, error: message });
+        }
+    }
+);
+
 // DELETE /api/v1/marketplace/orders/:id — Cancel an order
 router.delete(
     "/orders/:id",
@@ -111,7 +158,7 @@ router.delete(
             const [order] = await db
                 .select()
                 .from(orders)
-                .where(eq(orders.id, req.params.id))
+                .where(eq(orders.id, req.params.id as string))
                 .limit(1);
 
             if (!order) {
@@ -124,8 +171,9 @@ router.delete(
                 return;
             }
 
-            if (order.status !== "OPEN") {
-                res.status(400).json({ success: false, error: "Order is not open" });
+            // Allow cancelling OPEN and PARTIALLY_FILLED orders
+            if (order.status !== "OPEN" && order.status !== "PARTIALLY_FILLED") {
+                res.status(400).json({ success: false, error: "Order cannot be cancelled" });
                 return;
             }
 
@@ -168,6 +216,15 @@ router.get(
 const ROYALTY_BPS = 1000; // 10%
 const PLATFORM_BPS = 10; // 0.10%
 
+/**
+ * Determine the appropriate order status based on remaining vs original quantity.
+ */
+function deriveOrderStatus(remaining: number, originalQuantity: number): "OPEN" | "PARTIALLY_FILLED" | "FILLED" {
+    if (remaining <= 0) return "FILLED";
+    if (remaining < originalQuantity) return "PARTIALLY_FILLED";
+    return "OPEN";
+}
+
 async function tryMatch(orderId: string, side: string, price: number) {
     const [order] = await db
         .select()
@@ -175,29 +232,38 @@ async function tryMatch(orderId: string, side: string, price: number) {
         .where(eq(orders.id, orderId))
         .limit(1);
 
-    if (!order || order.status !== "OPEN") return;
+    if (!order || (order.status !== "OPEN" && order.status !== "PARTIALLY_FILLED")) return;
 
-    // Find matching counter-orders
-    const counterSide = side === "BUY" ? "SELL" : "BUY";
-
+    // Find matching counter-orders (include PARTIALLY_FILLED ones too)
     let counterOrders;
     if (side === "BUY") {
         // Match with asks at or below the buy price
         counterOrders = await db
             .select()
             .from(orders)
-            .where(and(eq(orders.side, "SELL"), eq(orders.status, "OPEN")))
+            .where(
+                and(
+                    eq(orders.side, "SELL"),
+                    or(eq(orders.status, "OPEN"), eq(orders.status, "PARTIALLY_FILLED"))
+                )
+            )
             .orderBy(asc(orders.price), asc(orders.placedAt));
     } else {
         // Match with bids at or above the sell price
         counterOrders = await db
             .select()
             .from(orders)
-            .where(and(eq(orders.side, "BUY"), eq(orders.status, "OPEN")))
+            .where(
+                and(
+                    eq(orders.side, "BUY"),
+                    or(eq(orders.status, "OPEN"), eq(orders.status, "PARTIALLY_FILLED"))
+                )
+            )
             .orderBy(desc(orders.price), asc(orders.placedAt));
     }
 
     let remaining = parseFloat(order.remaining);
+    const originalQuantity = parseFloat(order.quantity);
 
     for (const counter of counterOrders) {
         if (remaining <= 0) break;
@@ -209,6 +275,7 @@ async function tryMatch(orderId: string, side: string, price: number) {
         if (side === "SELL" && counterPrice < price) break;
 
         const counterRemaining = parseFloat(counter.remaining);
+        const counterOriginalQty = parseFloat(counter.quantity);
         const fillQty = Math.min(remaining, counterRemaining);
         const fillPrice = counterPrice; // price-time priority: use resting order's price
 
@@ -230,13 +297,13 @@ async function tryMatch(orderId: string, side: string, price: number) {
             platformFee: String(platformFee),
         });
 
-        // Update counter order
+        // Update counter order with correct partial fill status
         const newCounterRemaining = counterRemaining - fillQty;
         await db
             .update(orders)
             .set({
                 remaining: String(newCounterRemaining),
-                status: newCounterRemaining <= 0 ? "FILLED" : "OPEN",
+                status: deriveOrderStatus(newCounterRemaining, counterOriginalQty),
             })
             .where(eq(orders.id, counter.id));
 
@@ -283,12 +350,12 @@ async function tryMatch(orderId: string, side: string, price: number) {
         remaining -= fillQty;
     }
 
-    // Update our order
+    // Update our order with correct partial fill status
     await db
         .update(orders)
         .set({
             remaining: String(remaining),
-            status: remaining <= 0 ? "FILLED" : "OPEN",
+            status: deriveOrderStatus(remaining, originalQuantity),
         })
         .where(eq(orders.id, order.id));
 }

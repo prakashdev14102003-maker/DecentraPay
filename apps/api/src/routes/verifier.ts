@@ -60,7 +60,7 @@ const decideSchema = z.object({
     reason: z.string().optional(),
 });
 
-// GET /api/v1/verifier/queue — List pending submissions
+// GET /api/v1/verifier/queue — List pending submissions with proof info
 router.get(
     "/queue",
     authenticate,
@@ -68,8 +68,23 @@ router.get(
     async (req: Request, res: Response) => {
         try {
             const pending = await db
-                .select()
+                .select({
+                    id: verifications.id,
+                    submissionId: verifications.submissionId,
+                    verifierId: verifications.verifierId,
+                    auditPdfPath: verifications.auditPdfPath,
+                    auditPdfHash: verifications.auditPdfHash,
+                    auditorTotalKg: verifications.auditorTotalKg,
+                    tolerancePct: verifications.tolerancePct,
+                    decision: verifications.decision,
+                    reason: verifications.reason,
+                    chainTxHash: verifications.chainTxHash,
+                    decidedAt: verifications.decidedAt,
+                    proofPdfPath: submissions.proofPdfPath,
+                    proofPdfHash: submissions.proofPdfHash,
+                })
                 .from(verifications)
+                .innerJoin(submissions, eq(verifications.submissionId, submissions.id))
                 .where(eq(verifications.decision, "PENDING"));
 
             res.json({ success: true, data: pending });

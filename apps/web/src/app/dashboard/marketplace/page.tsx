@@ -42,6 +42,11 @@ interface Order {
     placedAt: string;
 }
 
+interface MyOrder extends Order {
+    filled: string;
+    fillPct: number;
+}
+
 interface Trade {
     id: string;
     price: string;
@@ -51,26 +56,55 @@ interface Trade {
     executedAt: string;
 }
 
+function StatusBadge({ status }: { status: string }) {
+    const config: Record<string, { className: string; label: string }> = {
+        OPEN: { className: "bg-slate-500/10 text-slate-400 border-slate-500/20", label: "Open" },
+        PARTIALLY_FILLED: { className: "bg-amber-500/10 text-amber-400 border-amber-500/20", label: "Partial" },
+        FILLED: { className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", label: "Filled" },
+        CANCELLED: { className: "bg-red-500/10 text-red-400 border-red-500/20", label: "Cancelled" },
+    };
+    const c = config[status] || config.OPEN;
+    return <Badge variant="secondary" className={c.className}>{c.label}</Badge>;
+}
+
+function FillProgressBar({ fillPct }: { fillPct: number }) {
+    return (
+        <div className="flex items-center gap-2">
+            <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${Math.min(fillPct, 100)}%` }}
+                />
+            </div>
+            <span className="text-xs text-muted-foreground font-mono">{fillPct}%</span>
+        </div>
+    );
+}
+
 export default function MarketplacePage() {
     const api = useApiClient();
     const [bids, setBids] = useState<Order[]>([]);
     const [asks, setAsks] = useState<Order[]>([]);
     const [trades, setTrades] = useState<Trade[]>([]);
+    const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
     const [orderSide, setOrderSide] = useState<"BUY" | "SELL">("BUY");
     const [price, setPrice] = useState("");
     const [quantity, setQuantity] = useState("");
     const [loading, setLoading] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
 
     const loadData = async () => {
         try {
-            const [book, tradeList] = await Promise.all([
+            const [book, tradeList, orders] = await Promise.all([
                 api.fetch("/marketplace/orderbook"),
                 api.fetch("/marketplace/trades"),
+                api.fetch("/marketplace/orders/mine").catch(() => []),
             ]);
             setBids(book.bids || []);
             setAsks(book.asks || []);
             setTrades(tradeList || []);
+            setMyOrders(orders || []);
         } catch {
             // API might not be running
         }
@@ -102,6 +136,19 @@ export default function MarketplacePage() {
             toast.error(err instanceof Error ? err.message : "Failed to place order");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCancelOrder = async (orderId: string) => {
+        setCancellingId(orderId);
+        try {
+            await api.fetch(`/marketplace/orders/${orderId}`, { method: "DELETE" });
+            toast.success("Order cancelled");
+            loadData();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to cancel order");
+        } finally {
+            setCancellingId(null);
         }
     };
 
@@ -181,24 +228,38 @@ export default function MarketplacePage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Price</TableHead>
-                                        <TableHead className="text-right">Quantity</TableHead>
+                                        <TableHead className="text-right">Remaining</TableHead>
+                                        <TableHead className="text-right">Qty</TableHead>
+                                        <TableHead className="text-right">Fill</TableHead>
                                         <TableHead className="text-right">Total</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {bids.map((b) => (
-                                        <TableRow key={b.id}>
-                                            <TableCell className="text-emerald-400 font-mono">
-                                                {parseFloat(b.price).toFixed(2)}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {parseFloat(b.remaining).toFixed(3)}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono text-muted-foreground">
-                                                {(parseFloat(b.price) * parseFloat(b.remaining)).toFixed(2)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {bids.map((b) => {
+                                        const qty = parseFloat(b.quantity);
+                                        const rem = parseFloat(b.remaining);
+                                        const filled = qty - rem;
+                                        const fillPct = qty > 0 ? Math.round((filled / qty) * 100) : 0;
+                                        return (
+                                            <TableRow key={b.id}>
+                                                <TableCell className="text-emerald-400 font-mono">
+                                                    {parseFloat(b.price).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono">
+                                                    {rem.toFixed(3)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-muted-foreground">
+                                                    {qty.toFixed(3)}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {fillPct > 0 ? <FillProgressBar fillPct={fillPct} /> : <span className="text-xs text-muted-foreground">—</span>}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-muted-foreground">
+                                                    {(parseFloat(b.price) * rem).toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         )}
@@ -217,30 +278,120 @@ export default function MarketplacePage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Price</TableHead>
-                                        <TableHead className="text-right">Quantity</TableHead>
+                                        <TableHead className="text-right">Remaining</TableHead>
+                                        <TableHead className="text-right">Qty</TableHead>
+                                        <TableHead className="text-right">Fill</TableHead>
                                         <TableHead className="text-right">Total</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {asks.map((a) => (
-                                        <TableRow key={a.id}>
-                                            <TableCell className="text-red-400 font-mono">
-                                                {parseFloat(a.price).toFixed(2)}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {parseFloat(a.remaining).toFixed(3)}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono text-muted-foreground">
-                                                {(parseFloat(a.price) * parseFloat(a.remaining)).toFixed(2)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {asks.map((a) => {
+                                        const qty = parseFloat(a.quantity);
+                                        const rem = parseFloat(a.remaining);
+                                        const filled = qty - rem;
+                                        const fillPct = qty > 0 ? Math.round((filled / qty) * 100) : 0;
+                                        return (
+                                            <TableRow key={a.id}>
+                                                <TableCell className="text-red-400 font-mono">
+                                                    {parseFloat(a.price).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono">
+                                                    {rem.toFixed(3)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-muted-foreground">
+                                                    {qty.toFixed(3)}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {fillPct > 0 ? <FillProgressBar fillPct={fillPct} /> : <span className="text-xs text-muted-foreground">—</span>}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-muted-foreground">
+                                                    {(parseFloat(a.price) * rem).toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         )}
                     </CardContent>
                 </Card>
             </div>
+
+            {/* My Orders */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">My Orders</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {myOrders.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">No orders placed yet</p>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Side</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead className="text-right">Qty</TableHead>
+                                    <TableHead className="text-right">Filled</TableHead>
+                                    <TableHead>Progress</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Placed</TableHead>
+                                    <TableHead></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {myOrders.map((o) => (
+                                    <TableRow key={o.id}>
+                                        <TableCell>
+                                            <Badge
+                                                variant="secondary"
+                                                className={
+                                                    o.side === "BUY"
+                                                        ? "bg-emerald-500/10 text-emerald-400"
+                                                        : "bg-red-500/10 text-red-400"
+                                                }
+                                            >
+                                                {o.side}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="font-mono">
+                                            {parseFloat(o.price).toFixed(2)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                            {parseFloat(o.quantity).toFixed(3)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                            {parseFloat(o.filled).toFixed(3)}
+                                        </TableCell>
+                                        <TableCell>
+                                            <FillProgressBar fillPct={o.fillPct} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={o.status} />
+                                        </TableCell>
+                                        <TableCell className="text-right text-sm text-muted-foreground">
+                                            {new Date(o.placedAt).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {(o.status === "OPEN" || o.status === "PARTIALLY_FILLED") && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-muted-foreground hover:text-red-400 text-xs"
+                                                    onClick={() => handleCancelOrder(o.id)}
+                                                    disabled={cancellingId === o.id}
+                                                >
+                                                    {cancellingId === o.id ? "…" : "Cancel"}
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Recent Trades */}
             <Card>

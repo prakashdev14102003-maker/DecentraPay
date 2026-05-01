@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
 import { config } from "./config.js";
 
 // Routes
@@ -16,6 +17,9 @@ const app = express();
 // Middleware
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
+
+// Serve uploaded proof documents
+app.use("/uploads", express.static(path.resolve("uploads")));
 
 // Health check
 app.get("/api/health", (_req, res) => {

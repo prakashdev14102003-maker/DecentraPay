@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
+import multer from "multer";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { db } from "../db/index.js";
@@ -9,8 +13,29 @@ import { calculate } from "../services/calculation.engine.js";
 
 const router: Router = Router();
 
-const createSubmissionSchema = z.object({
-    period: z.string().regex(/^\d{6}$/, "Period must be YYYYMM format"),
+// ─── Multer config for proof PDF uploads ───────────────────
+const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dir = path.resolve("uploads/proofs");
+        fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+        cb(null, `${unique}-${file.originalname}`);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype === "application/pdf") {
+            cb(null, true);
+        } else {
+            cb(new Error("Only PDF files are allowed"));
+        }
+    },
 });
 
 const activitiesSchema = z.object({
@@ -24,16 +49,34 @@ const activitiesSchema = z.object({
     ),
 });
 
-// POST /api/v1/submissions — Create a new submission for a period
+// POST /api/v1/submissions — Create a new submission for a period (with proof PDF upload)
 router.post(
     "/",
     authenticate,
     authorize("COMPANY"),
-    validate(createSubmissionSchema),
+    upload.single("proofDocument"),
     async (req: Request, res: Response) => {
         try {
             const companyId = req.user!.companyId!;
-            const { period } = req.body;
+            const period = req.body.period;
+
+            // Validate period format
+            if (!period || !/^\d{6}$/.test(period)) {
+                res.status(400).json({
+                    success: false,
+                    error: "Period must be in YYYYMM format",
+                });
+                return;
+            }
+
+            // Require proof document
+            if (!req.file) {
+                res.status(400).json({
+                    success: false,
+                    error: "Proof PDF document is required",
+                });
+                return;
+            }
 
             // Enforce C3: one submission per (company_id, period)
             const existing = await db
@@ -48,12 +91,29 @@ router.post(
                 .limit(1);
 
             if (existing.length > 0) {
+                // Clean up uploaded file on conflict
+                if (req.file) fs.unlinkSync(req.file.path);
                 res.status(409).json({
                     success: false,
-                    error: `Submission for period ${period} already exists`,
+                    error: `Submission for period ${period} already exists (one submission per month)`,
                 });
                 return;
             }
+
+            // Compute SHA-256 hash of the uploaded PDF
+            const fileBuffer = fs.readFileSync(req.file.path);
+            const proofPdfHash = crypto
+                .createHash("sha256")
+                .update(fileBuffer)
+                .digest("hex");
+
+            // Move file to organized path: uploads/proofs/<companyId>/<period>.pdf
+            const organizedDir = path.resolve("uploads/proofs", companyId);
+            fs.mkdirSync(organizedDir, { recursive: true });
+            const organizedPath = path.join(organizedDir, `${period}.pdf`);
+            fs.renameSync(req.file.path, organizedPath);
+
+            const proofPdfPath = `proofs/${companyId}/${period}.pdf`;
 
             const [submission] = await db
                 .insert(submissions)
@@ -61,11 +121,17 @@ router.post(
                     companyId,
                     period,
                     factorLibraryVersion: "v2025.1",
+                    proofPdfPath,
+                    proofPdfHash,
                 })
                 .returning();
 
             res.status(201).json({ success: true, data: submission });
         } catch (err: unknown) {
+            // Clean up uploaded file on error
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
             const message = err instanceof Error ? err.message : "Failed to create submission";
             res.status(500).json({ success: false, error: message });
         }

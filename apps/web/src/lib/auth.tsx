@@ -122,5 +122,18 @@ export function useApiClient() {
             if (!data.success) throw new Error(data.error || "Request failed");
             return data.data;
         },
+        /** For multipart/form-data uploads — omits Content-Type so browser sets boundary */
+        fetchRaw: async (path: string, options: RequestInit = {}) => {
+            const res = await fetch(`${API_URL}${path}`, {
+                ...options,
+                headers: {
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                    ...options.headers,
+                },
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Request failed");
+            return data.data;
+        },
     };
 }

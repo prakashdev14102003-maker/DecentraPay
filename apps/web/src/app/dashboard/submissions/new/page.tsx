@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ let nextRowId = 1;
 export default function NewSubmissionPage() {
     const api = useApiClient();
     const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [period, setPeriod] = useState(() => {
         const now = new Date();
         return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -76,6 +77,7 @@ export default function NewSubmissionPage() {
     const [rows, setRows] = useState<ActivityRow[]>([
         { id: nextRowId++, scope: 1, activityType: "natural_gas", activityValue: "", activityUnit: "mmBtu" },
     ]);
+    const [proofFile, setProofFile] = useState<File | null>(null);
     const [result, setResult] = useState<{
         totalScope1Kg: number;
         totalScope2Kg: number;
@@ -83,7 +85,6 @@ export default function NewSubmissionPage() {
         totalKg: number;
     } | null>(null);
     const [loading, setLoading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
 
     const addRow = () => {
         setRows([
@@ -109,13 +110,44 @@ export default function NewSubmissionPage() {
         );
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.type !== "application/pdf") {
+                toast.error("Only PDF files are allowed");
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error("File size must be less than 10 MB");
+                return;
+            }
+            setProofFile(file);
+        }
+    };
+
+    const removeFile = () => {
+        setProofFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
     const handleCalculate = async () => {
+        if (!proofFile) {
+            toast.error("Please upload a proof document (PDF)");
+            return;
+        }
+
         setLoading(true);
         try {
-            // First create the submission
-            const submission = await api.fetch("/submissions", {
+            // Create submission with proof document via FormData
+            const formData = new FormData();
+            formData.append("period", period);
+            formData.append("proofDocument", proofFile);
+
+            const submission = await api.fetchRaw("/submissions", {
                 method: "POST",
-                body: JSON.stringify({ period }),
+                body: formData,
             });
 
             // Then add activities and calculate
@@ -150,7 +182,7 @@ export default function NewSubmissionPage() {
             <div>
                 <h1 className="text-2xl font-bold">New Submission</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Enter your activity data to calculate emissions
+                    Enter your activity data and upload a proof document to calculate emissions
                 </p>
             </div>
 
@@ -166,6 +198,60 @@ export default function NewSubmissionPage() {
                         placeholder="202604"
                         className="w-40 font-mono"
                         maxLength={6}
+                    />
+                </CardContent>
+            </Card>
+
+            {/* Proof Document Upload */}
+            <Card className="border-amber-500/30">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Proof Document
+                    </CardTitle>
+                    <CardDescription>
+                        Upload a PDF document as evidence to support your emission data (max 10 MB)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {proofFile ? (
+                        <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{proofFile.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {(proofFile.size / 1024).toFixed(1)} KB
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeFile}
+                                className="text-muted-foreground hover:text-red-400 shrink-0"
+                            >
+                                ✕ Remove
+                            </Button>
+                        </div>
+                    ) : (
+                        <div
+                            className="border-2 border-dashed border-border/60 rounded-lg p-8 text-center cursor-pointer hover:border-amber-500/40 transition-colors"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-muted-foreground mb-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p className="text-sm text-muted-foreground">
+                                Click to select a PDF file or drag & drop
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                PDF only, max 10 MB
+                            </p>
+                        </div>
+                    )}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handleFileChange}
+                        className="hidden"
                     />
                 </CardContent>
             </Card>
@@ -289,7 +375,7 @@ export default function NewSubmissionPage() {
             <div className="flex justify-end">
                 <Button
                     onClick={handleCalculate}
-                    disabled={loading || rows.length === 0}
+                    disabled={loading || rows.length === 0 || !proofFile}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white px-8"
                 >
                     {loading ? "Calculating…" : "Submit & Calculate"}
