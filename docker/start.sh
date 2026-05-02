@@ -106,18 +106,13 @@ fi
 
 if [ -n "$NEXT_PUBLIC_API_URL" ]; then
     # Rebuild is needed for NEXT_PUBLIC_ vars — for now, set it at runtime
-    sed -i "s|environment=PORT=\"3000\"|environment=NEXT_PUBLIC_API_URL=\"$NEXT_PUBLIC_API_URL\",PORT=\"3000\"|" \
+    sed -i "s|environment=PORT=\"%(ENV_PORT)s\"|environment=NEXT_PUBLIC_API_URL=\"$NEXT_PUBLIC_API_URL\",PORT=\"%(ENV_PORT)s\"|" \
         /etc/supervisor/conf.d/decentrapay.conf 2>/dev/null || true
 fi
 
-# ── 11. Inject Railway's PORT so the web process listens on the right port ──
-# Railway sets $PORT at runtime; supervisord.conf hardcodes 3000 which would
-# shadow Railway's value and cause the healthcheck to fail.
-if [ -n "$PORT" ]; then
-    echo "▸ Railway PORT=$PORT detected — configuring web app to listen on port $PORT"
-    sed -i "s|PORT=\"3000\"|PORT=\"$PORT\"|g" \
-        /etc/supervisor/conf.d/decentrapay.conf 2>/dev/null || true
-fi
+# ── 11. PORT is now passed via %(ENV_PORT)s in supervisord.conf ──────────────
+# supervisord.conf uses %(ENV_PORT)s which inherits Railway's injected PORT
+# directly — no sed patching needed.
 
 # ── 12. Launch everything with supervisord ───────────────────
 echo ""
