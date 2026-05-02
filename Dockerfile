@@ -75,11 +75,12 @@ WORKDIR /app
 RUN mkdir -p /var/run/postgresql /var/lib/postgresql/data \
     && chown -R postgres:postgres /var/run/postgresql /var/lib/postgresql/data
 
-# Expose ports: Web (3000), API (3001), Hardhat (8545)
+# Railway injects $PORT at runtime; the web app will listen on that port.
+# EXPOSE is documentation-only — Railway routes traffic via its own $PORT.
 EXPOSE 3000 3001 8545
 
-# Health check on the web app
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+# NOTE: No hardcoded HEALTHCHECK here.
+# Railway performs its own external healthcheck against the $PORT it injects,
+# which start.sh forwards into the supervisord web config at runtime.
 
 ENTRYPOINT ["/app/start.sh"]

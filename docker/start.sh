@@ -110,11 +110,20 @@ if [ -n "$NEXT_PUBLIC_API_URL" ]; then
         /etc/supervisor/conf.d/decentrapay.conf 2>/dev/null || true
 fi
 
-# ── 11. Launch everything with supervisord ───────────────────
+# ── 11. Inject Railway's PORT so the web process listens on the right port ──
+# Railway sets $PORT at runtime; supervisord.conf hardcodes 3000 which would
+# shadow Railway's value and cause the healthcheck to fail.
+if [ -n "$PORT" ]; then
+    echo "▸ Railway PORT=$PORT detected — configuring web app to listen on port $PORT"
+    sed -i "s|PORT=\"3000\"|PORT=\"$PORT\"|g" \
+        /etc/supervisor/conf.d/decentrapay.conf 2>/dev/null || true
+fi
+
+# ── 12. Launch everything with supervisord ───────────────────
 echo ""
 echo "══════════════════════════════════════════════════"
 echo "  ✓ All services starting via supervisord"
-echo "    Web:     http://0.0.0.0:3000"
+echo "    Web:     http://0.0.0.0:${PORT:-3000}"
 echo "    API:     http://0.0.0.0:3001"
 echo "    Hardhat: http://127.0.0.1:8545"
 echo "══════════════════════════════════════════════════"
